@@ -275,7 +275,7 @@ function calc(){
   const total = round2(taxable+gst);
   const received = Math.max(0, round2(S.received));
   const balance = round2(total-received);
-  let status = "UNPAID", cls = "st-unpaid";
+  let status = "", cls = "st-unpaid";
   if(total>0 && received>=total){ status="PAID"; cls="st-paid"; }
   else if(received>0){ status="PARTLY PAID"; cls="st-part"; }
   return {rows,sub,disc,taxable,gst,total,received,balance,status,cls};
