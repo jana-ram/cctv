@@ -1,0 +1,508 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quotation Generator</title>
+<style id="pageFootStyle"></style>
+<style>
+/* Layout: form panel on the left (screen only), A4 paper preview on the right. Print shows only the paper. */
+:root{
+  --navy:#0b1b3d; --teal:#00a4a6; --gold:#d4af37; --net:#f4f7f9;
+  --ink:#1c2433; --muted:#5b6678; --line:#d9dfe7; --panel:#f3f5f8; --card:#ffffff; --accent:#0b1b3d;
+  --font:"Segoe UI","Noto Sans","Helvetica Neue",Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font-family:var(--font);color:var(--ink);background:#e4e8ee;font-size:14px}
+.app{display:grid;grid-template-columns:minmax(340px,430px) 1fr;min-height:100vh}
+.panel{background:var(--panel);border-right:1px solid var(--line);padding:18px 18px 40px;height:100vh;overflow:auto;position:sticky;top:0}
+.panel h1{font-size:18px;margin:0 0 2px;color:var(--navy)}
+.panel .sub{color:var(--muted);font-size:12.5px;margin:0 0 14px}
+.bar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+button,.btn{font:inherit;font-size:13px;border:1px solid var(--line);background:#fff;color:var(--ink);padding:7px 11px;border-radius:6px;cursor:pointer}
+button:hover,.btn:hover{border-color:var(--navy)}
+button.primary{background:var(--navy);color:#fff;border-color:var(--navy);font-weight:600}
+button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--teal);outline-offset:1px}
+details{background:var(--card);border:1px solid var(--line);border-radius:8px;margin-bottom:10px}
+summary{cursor:pointer;padding:10px 12px;font-weight:600;font-size:13.5px;color:var(--navy);list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"+";float:right;color:var(--muted)}
+details[open] summary::after{content:"–"}
+.sec{padding:2px 12px 12px;display:grid;gap:9px}
+label{display:grid;gap:3px;font-size:12px;color:var(--muted)}
+input,textarea,select{font:inherit;font-size:13.5px;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:6px;padding:7px 8px;width:100%}
+textarea{resize:vertical;line-height:1.4}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.three{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px}
+.item{border:1px solid var(--line);border-radius:8px;padding:9px;display:grid;gap:8px;background:#fbfcfd}
+.item .row-top{display:flex;gap:6px;justify-content:space-between;align-items:center}
+.item .row-top b{font-size:12px;color:var(--navy)}
+.item .tools button{padding:3px 8px;font-size:12px}
+.hint{font-size:12px;color:var(--muted);margin:0}
+.live{display:flex;justify-content:space-between;align-items:baseline;background:var(--navy);color:#fff;border-radius:8px;padding:10px 12px;margin-bottom:12px}
+.live span{font-size:12px;opacity:.8}.live b{font-size:19px;font-variant-numeric:tabular-nums}
+.sheet-wrap{padding:22px;overflow:auto}
+
+/* ---------- A4 paper ---------- */
+.paper{width:210mm;min-height:297mm;margin:0 auto;background:#fff;color:#1a1a1a;padding:14mm 14mm 16mm;
+  box-shadow:0 2px 14px rgba(11,27,61,.18);font-size:9.6pt;line-height:1.45}
+.paper *{box-sizing:border-box}
+.p-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
+.p-co{font-size:18pt;font-weight:800;color:var(--navy);line-height:1.12;text-transform:uppercase;overflow-wrap:anywhere}
+.p-tag{color:var(--teal);font-size:8pt;letter-spacing:.06em;margin-top:5px;text-transform:uppercase}
+.p-contact{color:#4a5568;font-size:8pt;margin-top:3px;white-space:pre-line}
+.p-doc{text-align:right;flex:none;white-space:nowrap}
+.p-doc h2{margin:0 0 6px;font-size:14.5pt;color:var(--navy);text-transform:uppercase;letter-spacing:.01em}
+.p-doc div{font-size:8.6pt;line-height:1.55}
+.p-rule{height:2.2mm;margin:4mm 0 7mm;background:linear-gradient(90deg,var(--teal) 50%,var(--gold) 50%)}
+.p-h{font-size:11pt;font-weight:700;color:var(--navy);margin:0 0 3mm;break-after:avoid;page-break-after:avoid}
+.p-sec{margin-bottom:6mm}
+.newpage{break-before:page;page-break-before:always}
+@media screen{.newpage{margin-top:14mm;padding-top:10mm;border-top:2px dashed #b9c2cf;position:relative}.newpage::before{content:"Page 2 starts here";position:absolute;top:-9px;left:0;background:#fff;padding-right:8px;font-size:7.5pt;color:#8a94a6}}
+.p-tbl tr.tot{break-before:avoid;page-break-before:avoid}
+.p-tbl tr.lastitem{break-after:avoid;page-break-after:avoid}
+.p-words{break-before:avoid;page-break-before:avoid}
+.p-sec p{margin:0 0 3mm}
+.p-cust div{margin-bottom:1.2mm}
+.blank{display:inline-block;min-width:60mm;border-bottom:1px solid #999;height:1em;vertical-align:baseline}
+.p-scope ul{list-style:none;margin:2mm 0 0;padding:0}
+.p-scope li{break-inside:avoid;page-break-inside:avoid;margin-bottom:.6mm}
+table.p-tbl{width:100%;border-collapse:collapse;margin-top:1mm;font-variant-numeric:tabular-nums}
+.p-tbl th{background:var(--navy);color:#fff;font-size:9pt;padding:2.6mm 3mm;border:1px solid var(--navy);text-align:center;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.p-tbl th:first-child{text-align:left}
+.p-tbl td{border:1px solid var(--line);padding:2.6mm 3mm;vertical-align:middle;font-size:9.4pt}
+.p-tbl tr{break-inside:avoid;page-break-inside:avoid}
+.p-tbl td.r{text-align:right}.p-tbl td.c{text-align:center;white-space:nowrap}
+.p-tbl .d1{font-weight:700}
+.p-tbl .d2{font-size:7.8pt;color:#555;margin-top:.8mm;white-space:pre-line}
+.p-tbl tr.tot td{background:var(--net);-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.p-tbl tr.tot.final td{border-top:1.6px solid var(--navy);border-bottom:1.6px solid var(--navy);font-weight:700}
+.p-tbl tr.tot td.lab{text-align:right}
+.p-words{margin-top:4mm}
+.p-terms{margin:0;padding:0;list-style:none}
+.p-terms li{margin-bottom:2.4mm;break-inside:avoid;page-break-inside:avoid;padding-left:5mm;text-indent:-5mm}
+.p-sign{display:flex;justify-content:space-between;gap:20mm;margin-top:12mm;break-inside:avoid;page-break-inside:avoid}
+.p-sign>div{flex:1;min-width:0}
+.p-sign .r{text-align:right}
+.p-sign .ttl{font-weight:700;color:var(--navy)}
+.p-sign .line{border-top:1px solid #444;margin-top:16mm;padding-top:1.6mm;font-size:8.6pt;max-width:75mm}
+.p-sign .r .line{margin-left:auto}
+[hidden]{display:none!important}
+.p-foot{margin-top:12mm;padding-top:2.2mm;text-align:center;font-size:8pt;line-height:1.5;color:#33415c;border-top:2px solid var(--teal);background:#fff}
+.p-foot div{white-space:nowrap}
+
+@media (max-width:1000px){
+  .app{grid-template-columns:1fr}
+  .panel{position:static;height:auto;border-right:0}
+}
+@media print{
+  @page{size:A4;margin:13mm 13mm 20mm}
+  html,body{background:#fff}
+  .panel{display:none!important}
+  .app{display:block}
+  .sheet-wrap{padding:0;overflow:visible}
+  .paper{width:auto;min-height:0;margin:0;padding:0;box-shadow:none}
+  .p-foot{display:none}
+}
+</style>
+</head>
+<body>
+<div class="app">
+<aside class="panel" id="panel">
+  <h1>Quotation Generator</h1>
+  <p class="sub">Fill the fields. The paper on the right updates as you type, and totals are calculated for you.</p>
+
+  <div class="live"><span id="liveLabel">Net payable</span><b id="liveTotal">₹0</b></div>
+
+  <div class="bar">
+    <button class="primary" id="btnPrint" type="button">Print / Save as PDF</button>
+    <button id="btnNew" type="button">New quote</button>
+    <button id="btnSave" type="button">Save quote file</button>
+    <label class="btn" style="display:inline-block;margin:0">Open quote file<input type="file" id="fileOpen" accept=".json,application/json" hidden></label>
+  </div>
+
+  <details open><summary>Quote details</summary><div class="sec">
+    <div class="two">
+      <label>Document title<input data-k="docTitle" id="docTitle"></label>
+      <label>Quote reference<input data-k="ref" id="ref"></label>
+    </div>
+    <div class="three">
+      <label>Date<input type="date" data-k="date" id="date"></label>
+      <label>Valid for (days)<input type="number" min="0" data-k="validDays" id="validDays"></label>
+      <label>&nbsp;<button type="button" id="btnNext">Next ref no.</button></label>
+    </div>
+  </div></details>
+
+  <details open><summary>Customer</summary><div class="sec">
+    <label>Customer / company name<input data-k="custName" id="custName" placeholder="Client name"></label>
+    <label>Site location / address<textarea rows="2" data-k="custAddr" id="custAddr" placeholder="Site address"></textarea></label>
+    <label>Phone / email (optional)<input data-k="custContact" id="custContact"></label>
+    <label>Salutation<input data-k="salutation" id="salutation"></label>
+    <label>Opening paragraph<textarea rows="4" data-k="intro" id="intro"></textarea></label>
+  </div></details>
+
+  <details open><summary>Services and pricing</summary><div class="sec">
+    <label>Table heading<input data-k="priceHeading" id="priceHeading"></label>
+    <div id="items" style="display:grid;gap:9px"></div>
+    <button type="button" id="btnAdd">+ Add line</button>
+    <p class="hint">Type a quantity and the line is added to the total (rate × quantity). Leave the quantity empty or 0 and the line shows "As per actuals" and stays out of the total, so for cable laying just type the meters when you know them.</p>
+    <div class="two">
+      <label>Discount (₹)<input type="number" min="0" step="0.01" data-k="discount" id="discount"></label>
+      <label>GST (%)<input type="number" min="0" step="0.01" data-k="gstPct" id="gstPct"></label>
+    </div>
+    <label>Total label when every line is priced<input data-k="netLabel" id="netLabel"></label>
+    <label>Total label while a line is still pending<input data-k="netLabelPending" id="netLabelPending"></label>
+    <label>Note after amount in words (shown only while a line is pending)<input data-k="wordsNote" id="wordsNote"></label>
+  </div></details>
+
+  <details><summary>Scope of work</summary><div class="sec">
+    <label>Heading<input data-k="scopeHeading" id="scopeHeading"></label>
+    <label>Lead-in sentence<input data-k="scopeIntro" id="scopeIntro"></label>
+    <label>Bullet points (one per line, leave empty to hide)<textarea rows="9" data-k="scope" id="scope"></textarea></label>
+  </div></details>
+
+  <details><summary>Terms and sign-off</summary><div class="sec">
+    <label>Heading<input data-k="termsHeading" id="termsHeading"></label>
+    <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="termsNewPage" style="width:auto"> Start the terms on a new page (page 2)</label>
+    <label>Terms (one per line, written as "Title: text")<textarea rows="12" data-k="terms" id="terms"></textarea></label>
+    <div class="two">
+      <label>Left sign-off title<input data-k="signL" id="signL"></label>
+      <label>Right sign-off title<input data-k="signR" id="signR"></label>
+      <label>Left caption<input data-k="signLCap" id="signLCap"></label>
+      <label>Right caption<input data-k="signRCap" id="signRCap"></label>
+    </div>
+  </div></details>
+
+  <details><summary>Your business (header)</summary><div class="sec">
+    <label>Company name<input data-k="company" id="company"></label>
+    <label>Tagline<input data-k="tagline" id="tagline"></label>
+    <label>Address / phone / GSTIN (optional, shown under the tagline)<textarea rows="3" data-k="contact" id="contact"></textarea></label>
+    <label>Footer shown at the bottom of every page (one line per row)<textarea rows="3" data-k="footer" id="footer"></textarea></label>
+  </div></details>
+
+  <p class="hint">In the print window choose "Save as PDF", paper A4, and turn on "Background graphics" so the table header colour prints. Your work is auto-saved in this browser; use "Save quote file" to keep a copy per client.</p>
+</aside>
+
+<main class="sheet-wrap"><article class="paper" id="paper" aria-label="Quotation preview"></article></main>
+</div>
+
+<script>
+(function(){
+"use strict";
+const $ = id => document.getElementById(id);
+const esc = s => String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const KEY = "quotation-generator-draft-v2";
+
+/* ---------- helpers ---------- */
+const round2 = n => Math.round((Number(n)||0)*100)/100;
+function inr(n){
+  n = round2(n);
+  const frac = Math.abs(n % 1) > 0;
+  return "₹" + n.toLocaleString("en-IN",{minimumFractionDigits:frac?2:0,maximumFractionDigits:2});
+}
+function pad(n){ return String(n).padStart(2,"0"); }
+function isoToday(){ const d=new Date(); return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); }
+function fmtDate(iso){ if(!iso) return ""; const [y,m,d]=iso.split("-"); return (d&&m&&y)? d+"-"+m+"-"+y : iso; }
+function addDays(iso,days){
+  if(!iso) return "";
+  const [y,m,d]=iso.split("-").map(Number);
+  const dt=new Date(y,m-1,d+Number(days||0));
+  return dt.getFullYear()+"-"+pad(dt.getMonth()+1)+"-"+pad(dt.getDate());
+}
+const ONES=["","One","Two","Three","Four","Five","Six","Seven","Eight","Nine","Ten","Eleven","Twelve","Thirteen","Fourteen","Fifteen","Sixteen","Seventeen","Eighteen","Nineteen"];
+const TENS=["","","Twenty","Thirty","Forty","Fifty","Sixty","Seventy","Eighty","Ninety"];
+function below100(n){ return n<20 ? ONES[n] : TENS[Math.floor(n/10)] + (n%10 ? "-"+ONES[n%10] : ""); }
+function words(n){
+  if(n===0) return "Zero";
+  const parts=[];
+  const crore=Math.floor(n/1e7), lakh=Math.floor(n%1e7/1e5), th=Math.floor(n%1e5/1e3), hun=Math.floor(n%1e3/100), rest=n%100;
+  if(crore) parts.push(words(crore)+" Crore");
+  if(lakh) parts.push(below100(lakh)+" Lakh");
+  if(th) parts.push(below100(th)+" Thousand");
+  if(hun) parts.push(ONES[hun]+" Hundred");
+  if(rest) parts.push((parts.length?"and ":"")+below100(rest));
+  return parts.join(" ");
+}
+function amountWords(total){
+  const p = Math.round(round2(total)*100);
+  const r = Math.floor(p/100), ps = p%100;
+  let s = "Rupees " + words(r);
+  if(ps) s += " and " + below100(ps) + " Paise";
+  return s + " Only";
+}
+function nextRef(ref){
+  const m = String(ref||"").match(/^(.*?)(\d+)(\D*)$/);
+  if(!m) return ref;
+  const num = String(parseInt(m[2],10)+1).padStart(m[2].length,"0");
+  return m[1]+num+m[3];
+}
+
+/* ---------- default content (taken from your CCTV quotation) ---------- */
+const CCTV = () => ({
+  company:"SHABYTES TECHNOLOGIES (OPC) PRIVATE LIMITED",
+  tagline:"Design • Develop • Deploy • Support",
+  contact:"",
+  footer:"Phone: +91 97865 28488 | +91 90033 22148 | +91 87602 09695\nEmail: support@shabytes.com",
+  docTitle:"Labor Quotation",
+  ref:"ST-CCTV-2026-001",
+  date:isoToday(), validDays:30,
+  custName:"", custAddr:"", custContact:"",
+  salutation:"Dear Sir/Madam,",
+  intro:"With reference to your requested requirement, please find below our professional labor quotation for the physical installation and network configuration of a single IP Camera system at your premises (where structural pipeline routing/cabling infrastructure is pre-laid or calculated on actuals).",
+  scopeHeading:"Scope of Work",
+  scopeIntro:"Our service engagement explicitly covers the following deployment operations:",
+  scope:[
+    "CAT6 wire pulling through existing concealed/open infrastructure layout lines.",
+    "Camera mounting and angle adjustment.",
+    "Standard RJ45 terminal connector crimping and continuity testing.",
+    "Dedicated camera base terminal surface box fixing.",
+    "Central PoE switch terminal patching, port link routing, and managed switch configuration.",
+    "Installation of the customer-supplied hard disk inside the NVR.",
+    "Camera IP network activation and basic configuration.",
+    "Mobile app live-view setup (subject to the customer's internet connection)."
+  ].join("\n"),
+  priceHeading:"Price Summary (Service & Labor Fee)",
+  items:[
+    {desc:"IP Camera Installation & Configuration Service",
+     details:"",
+     rate:450, qty:1, unit:"No", perUnit:false, qtyText:"", subText:""},
+    {desc:"CAT6 Cable Laying / Pulling Labor",
+     details:"",
+     rate:15, qty:0, unit:"Meter", perUnit:true, qtyText:"As per site actuals", subText:"Calculated Post-Work"}
+  ],
+  discount:0, gstPct:0,
+  netLabel:"Net Payable Amount:",
+  netLabelPending:"Net Payable Amount (Base Fixed Amount):",
+  wordsNote:"(Plus actual cable routing metrics).",
+  termsHeading:"Commercial & Deployment Terms",
+  termsNewPage:true,
+  terms:[
+    "Materials & Hardware Provision: All core physical hardware components—including but not limited to the IP Camera nodes, Network Video Recorder (NVR), Surveillance Hard Disk Drives, Central PoE Switch units, Camera Terminal Base Boxes, RJ45 Interface Connectors, and Equipment Rack systems—must be procured and fully provided by the customer prior to site work initiation. Shabytes Technologies is not responsible for the quality, compatibility or faults of customer-supplied equipment.",
+    "Pre-laid Cabling Prerequisites: The pre-existing concealed conduit pipelines or structural pathways intended for CAT6 wire routing must be entirely clear, continuous, and in standard viable condition. Any infrastructural blockages, structural breakages, or supplemental routing adjustments required will be charged additionally, as agreed with the customer before that extra work begins.",
+    "Network Continuity & Remote Access: A stable, active broadband internet connection paired with an operational Wi-Fi gateway router setup must be accessible at the installation site during network configuration stages to enable live mobile application remote-view capabilities. Shabytes Technologies is not responsible for internet, router or cloud service outages.",
+    "Payment Terms: 100% of the total invoice amount (the base amount plus cable laying charges at actual meters) is payable on completion of work and live demonstration of the mobile view."
+  ].join("\n"),
+  signL:"Prepared & Approved By:", signR:"Customer Acceptance Sign-Off:",
+  signLCap:"For SHABYTES TECHNOLOGIES (OPC) PVT LTD", signRCap:"Authorized Signature & Seal Date"
+});
+const BLANK = () => {
+  const b = CCTV();
+  Object.assign(b,{
+    docTitle:"Quotation", ref:"ST-2026-001", intro:"Thank you for your enquiry. Please find our quotation for the requested work below.",
+    scopeIntro:"", scope:"", terms:"",
+    items:[{desc:"", details:"", rate:0, qty:1, unit:"No", perUnit:false, qtyText:"", subText:""}],
+    netLabel:"Net Payable Amount:", netLabelPending:"Net Payable Amount (Base Fixed Amount):", wordsNote:""
+  });
+  return b;
+};
+
+function normalise(o){
+  const d = Object.assign(CCTV(), o);
+  if(o.netLabelPending===undefined){ d.netLabelPending = o.netLabel || d.netLabelPending; d.netLabel = "Net Payable Amount:"; }
+  d.items = (o.items||[]).map(it=>Object.assign({desc:"",details:"",rate:0,qty:0,unit:"",perUnit:false,qtyText:"",subText:""},it));
+  return d;
+}
+let S = load() || CCTV();
+
+function load(){
+  try{ const r = localStorage.getItem(KEY); if(!r) return null; const o = JSON.parse(r); return (o&&o.items)?normalise(o):null; }catch(e){ return null; }
+}
+function persist(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
+
+/* ---------- calculation ---------- */
+function calc(){
+  let sub = 0;
+  const rows = S.items.map(it=>{
+    const rate=Number(it.rate)||0, qty=Number(it.qty)||0;
+    if(qty>0){ const amt=round2(rate*qty); sub+=amt; return {it,amt,pending:false}; }
+    return {it,amt:null,pending:true};
+  });
+  const pending = rows.some(r=>r.pending);
+  sub = round2(sub);
+  const disc = Math.min(round2(S.discount), sub);
+  const taxable = round2(sub-disc);
+  const gst = round2(taxable*(Number(S.gstPct)||0)/100);
+  const total = round2(taxable+gst);
+  return {rows,sub,disc,taxable,gst,total,pending};
+}
+
+/* ---------- paper ---------- */
+function renderPaper(){
+  const c = calc();
+  const until = Number(S.validDays)>0 ? addDays(S.date,S.validDays) : "";
+  const blank = '<span class="blank"></span>';
+  const terms = S.terms.split("\n").map(s=>s.trim()).filter(Boolean);
+  const scope = S.scope.split("\n").map(s=>s.trim()).filter(Boolean);
+
+  let html = '';
+  html += '<div class="p-head"><div style="min-width:0;flex:1;max-width:60%">'
+       + '<div class="p-co">'+esc(S.company)+'</div>'
+       + (S.tagline?'<div class="p-tag">'+esc(S.tagline)+'</div>':'')
+       + (S.contact.trim()?'<div class="p-contact">'+esc(S.contact)+'</div>':'')
+       + '</div><div class="p-doc"><h2>'+esc(S.docTitle)+'</h2>'
+       + (S.date?'<div><b>Quotation Date:</b> '+esc(fmtDate(S.date))+'</div>':'')
+       + (until?'<div><b>Valid Until:</b> '+esc(fmtDate(until))+'</div>':'')
+       + (S.ref?'<div><b>Quote Ref:</b> '+esc(S.ref)+'</div>':'')
+       + '</div></div><div class="p-rule"></div>';
+
+  html += '<section class="p-sec p-cust"><div class="p-h">To / Customer Details:</div>'
+       + '<div><b>Customer Name / Company Name:</b> '+(S.custName.trim()?esc(S.custName):blank)+'</div>'
+       + '<div style="white-space:pre-line"><b>Site Location / Address:</b> '+(S.custAddr.trim()?esc(S.custAddr):blank)+'</div>'
+       + (S.custContact.trim()?'<div><b>Contact:</b> '+esc(S.custContact)+'</div>':'')
+       + '</section>';
+
+  if(S.salutation.trim()||S.intro.trim()){
+    html += '<section class="p-sec">'
+         + (S.salutation.trim()?'<p>'+esc(S.salutation)+'</p>':'')
+         + (S.intro.trim()?'<p style="white-space:pre-line">'+esc(S.intro)+'</p>':'')
+         + '</section>';
+  }
+
+  if(scope.length || S.scopeIntro.trim()){
+    html += '<section class="p-sec p-scope"><div class="p-h">'+esc(S.scopeHeading)+'</div>'
+         + (S.scopeIntro.trim()?'<div>'+esc(S.scopeIntro)+'</div>':'')
+         + (scope.length?'<ul>'+scope.map(s=>'<li>• '+esc(s)+'</li>').join("")+'</ul>':'')
+         + '</section>';
+  }
+
+  html += '<section class="p-sec"><div class="p-h">'+esc(S.priceHeading)+'</div>'
+       + '<table class="p-tbl"><thead><tr><th style="width:38%">Service / Task Description</th><th style="width:16%">Unit Rate</th><th style="width:21%">Quantity</th><th style="width:25%">Subtotal</th></tr></thead><tbody>';
+  c.rows.forEach(({it,amt},idx)=>{
+    const rate = Number(it.rate)||0;
+    const calcMode = !c.rows[idx].pending;
+    const rateTxt = inr(rate)+((it.perUnit && it.unit)?" / "+esc(it.unit):"");
+    const qtyTxt  = calcMode ? esc(String(Number(it.qty)||0)+(it.unit?" "+it.unit:"")) : esc(it.qtyText||"As per site actuals");
+    const subTxt  = calcMode ? inr(amt) : esc(it.subText||"Calculated Post-Work");
+    html += '<tr'+(idx===c.rows.length-1?' class="lastitem"':'')+'><td><div class="d1">'+esc(it.desc)+'</div>'+(it.details.trim()?'<div class="d2">'+esc(it.details)+'</div>':'')+'</td>'
+         + '<td class="r">'+rateTxt+'</td><td class="c">'+qtyTxt+'</td><td class="'+(calcMode?'r':'c')+'">'+subTxt+'</td></tr>';
+  });
+  if(c.disc>0 || Number(S.gstPct)>0){
+    html += '<tr class="tot"><td colspan="3" class="lab">Subtotal:</td><td class="r">'+inr(c.sub)+'</td></tr>';
+    if(c.disc>0) html += '<tr class="tot"><td colspan="3" class="lab">Discount:</td><td class="r">− '+inr(c.disc)+'</td></tr>';
+    if(Number(S.gstPct)>0) html += '<tr class="tot"><td colspan="3" class="lab">GST @ '+esc(String(Number(S.gstPct)))+'%:</td><td class="r">'+inr(c.gst)+'</td></tr>';
+  }
+  html += '<tr class="tot final"><td colspan="3" class="lab">'+esc(c.pending?S.netLabelPending:S.netLabel)+'</td><td class="r">'+inr(c.total)+'</td></tr>';
+  html += '</tbody></table>'
+       + '<div class="p-words"><b>Amount in Words:</b> '+esc(amountWords(c.total))+((c.pending&&S.wordsNote.trim())?' '+esc(S.wordsNote):'')+'</div></section>';
+
+  if(terms.length){
+    html += '<section class="p-sec'+(S.termsNewPage?' newpage':'')+'"><div class="p-h">'+esc(S.termsHeading)+'</div><ol class="p-terms" style="list-style:none">'
+         + terms.map((t,i)=>{
+             const k = t.indexOf(": ");
+             const hasTitle = k>0 && k<70;
+             const head = hasTitle ? '<b>'+esc(t.slice(0,k+1))+'</b> ' + esc(t.slice(k+2)) : esc(t);
+             return '<li>'+(i+1)+'. '+head+'</li>';
+           }).join("")
+         + '</ol></section>';
+  }
+
+  html += '<div class="p-sign"><div><div class="ttl">'+esc(S.signL)+'</div><div class="line">'+esc(S.signLCap)+'</div></div>'
+       + '<div class="r"><div class="ttl">'+esc(S.signR)+'</div><div class="line">'+esc(S.signRCap)+'</div></div></div>';
+
+  const foot = (S.footer||"").split("\n").map(x=>x.trim()).filter(Boolean);
+  const cssStr = t => '"' + t.replace(/\\/g,"\\\\").replace(/"/g,'\\"') + '"';
+  $("pageFootStyle").textContent = foot.length
+    ? '@page{@bottom-center{content:'+foot.map(cssStr).join(' "\\A " ')+';white-space:pre;text-align:center;vertical-align:top;font-family:"Segoe UI","Noto Sans","Helvetica Neue",Arial,sans-serif;font-size:8pt;line-height:1.55;color:#33415c;padding-top:3mm}}'
+    : '';
+  if(foot.length) html += '<div class="p-foot">'+foot.map(x=>'<div>'+esc(x)+'</div>').join("")+'</div>';
+  $("paper").innerHTML = html;
+  $("liveTotal").textContent = inr(c.total);
+  $("liveLabel").textContent = c.pending ? "Net payable (cable pending)" : "Net payable";
+  document.title = [S.ref, S.custName].filter(x=>x&&x.trim()).join(" - ") || "Quotation";
+}
+
+/* ---------- form binding ---------- */
+const simple = Array.from(document.querySelectorAll("[data-k]"));
+function fillForm(){
+  $("termsNewPage").checked = !!S.termsNewPage;
+  simple.forEach(el=>{ el.value = S[el.dataset.k]==null ? "" : S[el.dataset.k]; });
+  renderItems();
+}
+simple.forEach(el=>{
+  el.addEventListener("input",()=>{
+    const k=el.dataset.k;
+    S[k] = (el.type==="number") ? (el.value===""?0:Number(el.value)) : el.value;
+    persist(); renderPaper();
+  });
+});
+
+function renderItems(){
+  const box=$("items"); box.innerHTML="";
+  S.items.forEach((it,i)=>{
+    const d=document.createElement("div"); d.className="item";
+    d.innerHTML =
+      '<div class="row-top"><b>Line '+(i+1)+'</b><span class="tools">'
+      +'<button type="button" data-a="up" title="Move up">↑</button> '
+      +'<button type="button" data-a="down" title="Move down">↓</button> '
+      +'<button type="button" data-a="del" title="Remove line">Remove</button></span></div>'
+      +'<label>Service / task description<input data-f="desc" value="'+esc(it.desc)+'"></label>'
+      +'<label>Details (small text under the description)<input data-f="details" value="'+esc(it.details)+'"></label>'
+      +'<div class="three">'
+      +'<label>Unit rate (₹)<input type="number" step="0.01" min="0" data-f="rate" value="'+esc(it.rate)+'"></label>'
+      +'<label>Quantity<input type="number" step="0.01" min="0" data-f="qty" value="'+esc(it.qty)+'"></label>'
+      +'<label>Unit<input data-f="unit" value="'+esc(it.unit)+'" placeholder="No, Meter, Hr"></label></div>'
+      +'<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" data-f="perUnit" style="width:auto"'+(it.perUnit?" checked":"")+'> Show rate as "₹rate / unit" (for example ₹15 / Meter)</label>'
+      +'<div class="two">'
+      +'<label>Quantity text while empty<input data-f="qtyText" value="'+esc(it.qtyText)+'"></label>'
+      +'<label>Subtotal text while empty<input data-f="subText" value="'+esc(it.subText)+'"></label></div>'
+      +'<div class="hint" data-sub></div>';
+    const subHint=()=>{ const q=Number(it.qty)||0; d.querySelector("[data-sub]").innerHTML = q>0 ? 'Subtotal: <b>'+inr((Number(it.rate)||0)*q)+'</b>' : 'Pending: not added to the total until you enter a quantity'; };
+    subHint();
+    d.querySelectorAll("[data-f]").forEach(el=>{
+      el.addEventListener("input",()=>{
+        const f=el.dataset.f;
+        it[f] = el.type==="checkbox" ? el.checked : (el.type==="number" ? (el.value===""?0:Number(el.value)) : el.value);
+        subHint();
+        persist(); renderPaper();
+      });
+    });
+    d.querySelectorAll("[data-a]").forEach(b=>{
+      b.addEventListener("click",()=>{
+        const a=b.dataset.a;
+        if(a==="del"){ if(S.items.length>1) S.items.splice(i,1); else S.items[0]={desc:"",details:"",rate:0,qty:1,unit:"No",perUnit:false,qtyText:"",subText:""}; }
+        if(a==="up" && i>0) [S.items[i-1],S.items[i]]=[S.items[i],S.items[i-1]];
+        if(a==="down" && i<S.items.length-1) [S.items[i+1],S.items[i]]=[S.items[i],S.items[i+1]];
+        persist(); renderItems(); renderPaper();
+      });
+    });
+    box.appendChild(d);
+  });
+}
+
+/* ---------- buttons ---------- */
+$("termsNewPage").addEventListener("change",e=>{ S.termsNewPage=e.target.checked; persist(); renderPaper(); });
+$("btnAdd").addEventListener("click",()=>{
+  S.items.push({desc:"",details:"",rate:0,qty:1,unit:"No",perUnit:false,qtyText:"",subText:""});
+  persist(); renderItems(); renderPaper();
+  const last=$("items").lastElementChild; if(last) last.querySelector("input").focus();
+});
+$("btnNext").addEventListener("click",()=>{ S.ref=nextRef(S.ref); $("ref").value=S.ref; persist(); renderPaper(); });
+$("btnPrint").addEventListener("click",()=>window.print());
+$("btnNew").addEventListener("click",()=>{
+  // Keeps your business details, scope, terms and line items; clears the customer and moves date and reference on.
+  S.custName=""; S.custAddr=""; S.custContact=""; S.date=isoToday(); S.ref=nextRef(S.ref);
+  persist(); fillForm(); renderPaper(); $("custName").focus();
+});
+$("btnSave").addEventListener("click",()=>{
+  const blob=new Blob([JSON.stringify(S,null,2)],{type:"application/json"});
+  const a=document.createElement("a");
+  const name=(S.ref||"quotation")+(S.custName?"_"+S.custName.replace(/[^\w]+/g,"-"):"");
+  a.href=URL.createObjectURL(blob); a.download=name+".json";
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+});
+$("fileOpen").addEventListener("change",e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=()=>{ try{ const o=JSON.parse(r.result); if(o&&Array.isArray(o.items)){ S=normalise(o); persist(); fillForm(); renderPaper(); } }catch(err){} };
+  r.readAsText(f); e.target.value="";
+});
+
+/* test hooks, harmless in normal use */
+window.__q = {words:amountWords, calc, setState:o=>{S=Object.assign(CCTV(),o);persist();fillForm();renderPaper();}, blank:BLANK, cctv:CCTV};
+
+fillForm(); renderPaper();
+})();
+</script>
+</body>
+</html>

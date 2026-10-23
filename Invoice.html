@@ -1,0 +1,462 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Invoice Generator</title>
+<style id="pageFootStyle"></style>
+<style>
+/* Layout: form panel on the left (screen only), A4 paper preview on the right. Print shows only the paper. */
+:root{
+  --navy:#0b1b3d; --teal:#00a4a6; --gold:#d4af37; --net:#f4f7f9;
+  --paid:#1a7f4b; --part:#b45f06; --unpaid:#b42318;
+  --ink:#1c2433; --muted:#5b6678; --line:#d9dfe7; --panel:#f3f5f8; --card:#ffffff;
+  --font:"Segoe UI","Noto Sans","Helvetica Neue",Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font-family:var(--font);color:var(--ink);background:#e4e8ee;font-size:14px}
+.app{display:grid;grid-template-columns:minmax(340px,430px) 1fr;min-height:100vh}
+.panel{background:var(--panel);border-right:1px solid var(--line);padding:18px 18px 40px;height:100vh;overflow:auto;position:sticky;top:0}
+.panel h1{font-size:18px;margin:0 0 2px;color:var(--navy)}
+.panel .sub{color:var(--muted);font-size:12.5px;margin:0 0 14px}
+.bar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+button,.btn{font:inherit;font-size:13px;border:1px solid var(--line);background:#fff;color:var(--ink);padding:7px 11px;border-radius:6px;cursor:pointer}
+button:hover,.btn:hover{border-color:var(--navy)}
+button.primary{background:var(--navy);color:#fff;border-color:var(--navy);font-weight:600}
+button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--teal);outline-offset:1px}
+details{background:var(--card);border:1px solid var(--line);border-radius:8px;margin-bottom:10px}
+summary{cursor:pointer;padding:10px 12px;font-weight:600;font-size:13.5px;color:var(--navy);list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"+";float:right;color:var(--muted)}
+details[open] summary::after{content:"–"}
+.sec{padding:2px 12px 12px;display:grid;gap:9px}
+label{display:grid;gap:3px;font-size:12px;color:var(--muted)}
+input,textarea,select{font:inherit;font-size:13.5px;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:6px;padding:7px 8px;width:100%}
+textarea{resize:vertical;line-height:1.4}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.three{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px}
+.item{border:1px solid var(--line);border-radius:8px;padding:9px;display:grid;gap:8px;background:#fbfcfd}
+.item .row-top{display:flex;gap:6px;justify-content:space-between;align-items:center}
+.item .row-top b{font-size:12px;color:var(--navy)}
+.item .tools button{padding:3px 8px;font-size:12px}
+.hint{font-size:12px;color:var(--muted);margin:0}
+.hint.warn{color:var(--unpaid)}
+.live{display:grid;grid-template-columns:1fr auto;gap:2px 10px;align-items:baseline;background:var(--navy);color:#fff;border-radius:8px;padding:10px 12px;margin-bottom:12px}
+.live span{font-size:12px;opacity:.8}.live b{font-size:19px;font-variant-numeric:tabular-nums;text-align:right}
+.live .sm b{font-size:13px}
+.sheet-wrap{padding:22px;overflow:auto}
+
+/* ---------- A4 paper ---------- */
+.paper{width:210mm;min-height:297mm;margin:0 auto;background:#fff;color:#1a1a1a;padding:14mm 14mm 16mm;
+  box-shadow:0 2px 14px rgba(11,27,61,.18);font-size:9.6pt;line-height:1.45}
+.paper *{box-sizing:border-box}
+.p-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
+.p-co{font-size:18pt;font-weight:800;color:var(--navy);line-height:1.12;text-transform:uppercase;overflow-wrap:anywhere}
+.p-tag{color:var(--teal);font-size:8pt;letter-spacing:.06em;margin-top:5px;text-transform:uppercase}
+.p-contact{color:#4a5568;font-size:8pt;margin-top:3px;white-space:pre-line}
+.p-doc{text-align:right;flex:none;white-space:nowrap}
+.p-doc h2{margin:0 0 6px;font-size:14.5pt;color:var(--navy);text-transform:uppercase;letter-spacing:.01em}
+.p-doc div{font-size:8.6pt;line-height:1.55}
+.p-doc .status{font-weight:800;letter-spacing:.05em;margin-top:1mm}
+.st-paid{color:var(--paid)}.st-part{color:var(--part)}.st-unpaid{color:var(--unpaid)}
+.p-rule{height:2.2mm;margin:4mm 0 7mm;background:linear-gradient(90deg,var(--teal) 50%,var(--gold) 50%)}
+.p-h{font-size:11pt;font-weight:700;color:var(--navy);margin:0 0 3mm;break-after:avoid;page-break-after:avoid}
+.p-sec{margin-bottom:6mm}
+.p-cust div{margin-bottom:1.2mm}
+.blank{display:inline-block;min-width:60mm;border-bottom:1px solid #999;height:1em;vertical-align:baseline}
+table.p-tbl{width:100%;border-collapse:collapse;margin-top:1mm;font-variant-numeric:tabular-nums}
+.p-tbl th{background:var(--navy);color:#fff;font-size:9pt;padding:2.6mm 3mm;border:1px solid var(--navy);text-align:center;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.p-tbl th:first-child{text-align:left}
+.p-tbl td{border:1px solid var(--line);padding:2.6mm 3mm;vertical-align:middle;font-size:9.4pt}
+.p-tbl tr{break-inside:avoid;page-break-inside:avoid}
+.p-tbl td.r{text-align:right}.p-tbl td.c{text-align:center;white-space:nowrap}
+.p-tbl .d1{font-weight:700}
+.p-tbl .d2{font-size:7.8pt;color:#555;margin-top:.8mm;white-space:pre-line}
+.p-tbl tr.tot{break-before:avoid;page-break-before:avoid}
+.p-tbl tr.lastitem{break-after:avoid;page-break-after:avoid}
+.p-tbl tr.tot td{background:var(--net);-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.p-tbl tr.tot.final td{border-top:1.6px solid var(--navy);border-bottom:1.6px solid var(--navy);font-weight:700}
+.p-tbl tr.tot td.lab{text-align:right}
+.p-words{margin-top:4mm;break-before:avoid;page-break-before:avoid}
+.p-bottom{display:flex;justify-content:space-between;align-items:flex-end;gap:14mm;margin-top:8mm;break-inside:avoid;page-break-inside:avoid}
+.p-bottom>div{min-width:0}
+.p-bottom .left{flex:1}
+.p-pay{white-space:pre-line;line-height:1.55}
+.p-note{white-space:pre-line;margin-top:4mm;color:#333}
+.p-sign{flex:none;text-align:right;min-width:68mm}
+.p-sign .ttl{font-weight:700;color:var(--navy)}
+.p-sign .line{border-top:1px solid #444;margin-top:18mm;padding-top:1.6mm;font-size:8.6pt}
+[hidden]{display:none!important}
+.p-foot{margin-top:12mm;padding-top:2.2mm;text-align:center;font-size:8pt;line-height:1.5;color:#33415c;border-top:2px solid var(--teal);background:#fff}
+.p-foot div{white-space:nowrap}
+
+@media (max-width:1000px){
+  .app{grid-template-columns:1fr}
+  .panel{position:static;height:auto;border-right:0}
+}
+@media print{
+  @page{size:A4;margin:13mm 13mm 20mm}
+  html,body{background:#fff}
+  .panel{display:none!important}
+  .app{display:block}
+  .sheet-wrap{padding:0;overflow:visible}
+  .paper{width:auto;min-height:0;margin:0;padding:0;box-shadow:none}
+  .p-foot{display:none}
+}
+</style>
+</head>
+<body>
+<div class="app">
+<aside class="panel" id="panel">
+  <h1>Invoice Generator</h1>
+  <p class="sub">Fill the fields. The paper on the right updates as you type, and totals are calculated for you.</p>
+
+  <div class="live">
+    <span>Invoice total</span><b id="liveTotal">₹0</b>
+    <span class="sm" id="liveRecvLabel">Balance due</span><b class="sm" id="liveBal">₹0</b>
+  </div>
+
+  <div class="bar">
+    <button class="primary" id="btnPrint" type="button">Print / Save as PDF</button>
+    <button id="btnNew" type="button">New invoice</button>
+    <button id="btnSave" type="button">Save invoice file</button>
+    <label class="btn" style="display:inline-block;margin:0">Open invoice file<input type="file" id="fileOpen" accept=".json,application/json" hidden></label>
+    <label class="btn" style="display:inline-block;margin:0">Start from a quotation file<input type="file" id="fileQuote" accept=".json,application/json" hidden></label>
+  </div>
+
+  <details open><summary>Invoice details</summary><div class="sec">
+    <div class="two">
+      <label>Document title<input data-k="docTitle" id="docTitle"></label>
+      <label>Invoice number<input data-k="invNo" id="invNo"></label>
+    </div>
+    <div class="three">
+      <label>Invoice date<input type="date" data-k="date" id="date"></label>
+      <label>Due in (days)<input type="number" min="0" data-k="dueDays" id="dueDays"></label>
+      <label>&nbsp;<button type="button" id="btnNext">Next no.</button></label>
+    </div>
+    <label>Against quotation no. (optional)<input data-k="quoteRef" id="quoteRef" placeholder="For example ST-CCTV-2026-001"></label>
+    <p class="hint">Due in 0 days shows "On receipt" on the invoice.</p>
+  </div></details>
+
+  <details open><summary>Bill to</summary><div class="sec">
+    <label>Customer / company name<input data-k="custName" id="custName" placeholder="Client name"></label>
+    <label>Address<textarea rows="2" data-k="custAddr" id="custAddr" placeholder="Customer address"></textarea></label>
+    <label>Phone / email / GSTIN (optional)<input data-k="custContact" id="custContact"></label>
+  </div></details>
+
+  <details open><summary>Services and pricing</summary><div class="sec">
+    <label>Table heading<input data-k="priceHeading" id="priceHeading"></label>
+    <div id="items" style="display:grid;gap:9px"></div>
+    <button type="button" id="btnAdd">+ Add line</button>
+    <p class="hint">Each line is rate × quantity. For cable laying, type the actual meters in the quantity box.</p>
+    <div class="two">
+      <label>Discount (₹)<input type="number" min="0" step="0.01" data-k="discount" id="discount"></label>
+      <label>GST (%)<input type="number" min="0" step="0.01" data-k="gstPct" id="gstPct"></label>
+    </div>
+    <label>Amount received so far (₹)<input type="number" min="0" step="0.01" data-k="received" id="received"></label>
+    <p class="hint">Enter any advance or payment received. The invoice then shows Amount Received, Balance Due and a PAID / PARTLY PAID / UNPAID status.</p>
+  </div></details>
+
+  <details><summary>Payment details and notes</summary><div class="sec">
+    <label>Payment details (bank, UPI, shown only if filled)<textarea rows="5" data-k="payDetails" id="payDetails" placeholder="Account name:&#10;Bank and branch:&#10;Account number:&#10;IFSC:&#10;UPI ID:"></textarea></label>
+    <label>Notes (shown only if filled)<textarea rows="3" data-k="notes" id="notes"></textarea></label>
+  </div></details>
+
+  <details><summary>Your business (header and footer)</summary><div class="sec">
+    <label>Company name<input data-k="company" id="company"></label>
+    <label>Tagline<input data-k="tagline" id="tagline"></label>
+    <label>Address / GSTIN (optional, shown under the tagline)<textarea rows="3" data-k="contact" id="contact"></textarea></label>
+    <label>Footer shown at the bottom of every page (one line per row)<textarea rows="3" data-k="footer" id="footer"></textarea></label>
+    <div class="two">
+      <label>Signature line<input data-k="signCap" id="signCap"></label>
+      <label>Signature title<input data-k="signTitle" id="signTitle"></label>
+    </div>
+  </div></details>
+
+  <p class="hint">In the print window choose "Save as PDF", paper A4, and turn on "Background graphics" so the table header colour prints. Use Chrome or Edge so the footer prints on every page. Your work is auto-saved in this browser; use "Save invoice file" to keep a copy per client.</p>
+</aside>
+
+<main class="sheet-wrap"><article class="paper" id="paper" aria-label="Invoice preview"></article></main>
+</div>
+
+<script>
+(function(){
+"use strict";
+const $ = id => document.getElementById(id);
+const esc = s => String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const KEY = "invoice-generator-draft-v1";
+
+/* ---------- helpers ---------- */
+const round2 = n => Math.round((Number(n)||0)*100)/100;
+function inr(n){
+  n = round2(n);
+  const frac = Math.abs(n % 1) > 0;
+  return "₹" + n.toLocaleString("en-IN",{minimumFractionDigits:frac?2:0,maximumFractionDigits:2});
+}
+function pad(n){ return String(n).padStart(2,"0"); }
+function isoToday(){ const d=new Date(); return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); }
+function fmtDate(iso){ if(!iso) return ""; const [y,m,d]=iso.split("-"); return (d&&m&&y)? d+"-"+m+"-"+y : iso; }
+function addDays(iso,days){
+  if(!iso) return "";
+  const [y,m,d]=iso.split("-").map(Number);
+  const dt=new Date(y,m-1,d+Number(days||0));
+  return dt.getFullYear()+"-"+pad(dt.getMonth()+1)+"-"+pad(dt.getDate());
+}
+const ONES=["","One","Two","Three","Four","Five","Six","Seven","Eight","Nine","Ten","Eleven","Twelve","Thirteen","Fourteen","Fifteen","Sixteen","Seventeen","Eighteen","Nineteen"];
+const TENS=["","","Twenty","Thirty","Forty","Fifty","Sixty","Seventy","Eighty","Ninety"];
+function below100(n){ return n<20 ? ONES[n] : TENS[Math.floor(n/10)] + (n%10 ? "-"+ONES[n%10] : ""); }
+function words(n){
+  if(n===0) return "Zero";
+  const parts=[];
+  const crore=Math.floor(n/1e7), lakh=Math.floor(n%1e7/1e5), th=Math.floor(n%1e5/1e3), hun=Math.floor(n%1e3/100), rest=n%100;
+  if(crore) parts.push(words(crore)+" Crore");
+  if(lakh) parts.push(below100(lakh)+" Lakh");
+  if(th) parts.push(below100(th)+" Thousand");
+  if(hun) parts.push(ONES[hun]+" Hundred");
+  if(rest) parts.push((parts.length?"and ":"")+below100(rest));
+  return parts.join(" ");
+}
+function amountWords(total){
+  const p = Math.round(round2(total)*100);
+  const r = Math.floor(p/100), ps = p%100;
+  let s = "Rupees " + words(r);
+  if(ps) s += " and " + below100(ps) + " Paise";
+  return s + " Only";
+}
+function nextRef(ref){
+  const m = String(ref||"").match(/^(.*?)(\d+)(\D*)$/);
+  if(!m) return ref;
+  const num = String(parseInt(m[2],10)+1).padStart(m[2].length,"0");
+  return m[1]+num+m[3];
+}
+const blankItem = () => ({desc:"",details:"",rate:0,qty:1,unit:"No",perUnit:false});
+
+/* ---------- defaults (same business details as your quotation) ---------- */
+const DEFAULTS = () => ({
+  company:"SHABYTES TECHNOLOGIES (OPC) PRIVATE LIMITED",
+  tagline:"Design • Develop • Deploy • Support",
+  contact:"",
+  footer:"Phone: +91 97865 28488 | +91 90033 22148 | +91 87602 09695\nEmail: support@shabytes.com",
+  docTitle:"Invoice",
+  invNo:"ST-INV-2026-001",
+  date:isoToday(), dueDays:0, quoteRef:"",
+  custName:"", custAddr:"", custContact:"",
+  priceHeading:"Invoice Summary (Service & Labor Fee)",
+  items:[blankItem()],
+  discount:0, gstPct:0, received:0,
+  payDetails:"",
+  notes:"Thank you for your business.",
+  signCap:"For SHABYTES TECHNOLOGIES (OPC) PVT LTD",
+  signTitle:"Authorized Signatory"
+});
+function normalise(o){
+  const d = Object.assign(DEFAULTS(), o);
+  d.items = (Array.isArray(o.items)&&o.items.length ? o.items : [blankItem()]).map(it=>Object.assign(blankItem(),{qty:0},it));
+  return d;
+}
+function load(){
+  try{ const r = localStorage.getItem(KEY); if(!r) return null; const o = JSON.parse(r); return (o&&o.items)?normalise(o):null; }catch(e){ return null; }
+}
+function persist(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
+let S = load() || DEFAULTS();
+
+/* ---------- calculation ---------- */
+function calc(){
+  let sub = 0;
+  const rows = S.items.map(it=>{
+    const amt = round2((Number(it.rate)||0)*(Number(it.qty)||0));
+    sub += amt; return {it,amt};
+  });
+  sub = round2(sub);
+  const disc = Math.min(round2(S.discount), sub);
+  const taxable = round2(sub-disc);
+  const gst = round2(taxable*(Number(S.gstPct)||0)/100);
+  const total = round2(taxable+gst);
+  const received = Math.max(0, round2(S.received));
+  const balance = round2(total-received);
+  let status = "UNPAID", cls = "st-unpaid";
+  if(total>0 && received>=total){ status="PAID"; cls="st-paid"; }
+  else if(received>0){ status="PARTLY PAID"; cls="st-part"; }
+  return {rows,sub,disc,taxable,gst,total,received,balance,status,cls};
+}
+
+/* ---------- paper ---------- */
+function renderPaper(){
+  const c = calc();
+  const dueTxt = Number(S.dueDays)>0 ? fmtDate(addDays(S.date,S.dueDays)) : "On receipt";
+  const blank = '<span class="blank"></span>';
+  let html = '';
+
+  html += '<div class="p-head"><div style="min-width:0;flex:1;max-width:60%">'
+       + '<div class="p-co">'+esc(S.company)+'</div>'
+       + (S.tagline?'<div class="p-tag">'+esc(S.tagline)+'</div>':'')
+       + (S.contact.trim()?'<div class="p-contact">'+esc(S.contact)+'</div>':'')
+       + '</div><div class="p-doc"><h2>'+esc(S.docTitle)+'</h2>'
+       + (S.invNo?'<div><b>Invoice No:</b> '+esc(S.invNo)+'</div>':'')
+       + (S.date?'<div><b>Invoice Date:</b> '+esc(fmtDate(S.date))+'</div>':'')
+       + '<div><b>Due Date:</b> '+esc(dueTxt)+'</div>'
+       + (S.quoteRef.trim()?'<div><b>Against Quote:</b> '+esc(S.quoteRef)+'</div>':'')
+       + '<div class="status '+c.cls+'">'+c.status+'</div>'
+       + '</div></div><div class="p-rule"></div>';
+
+  html += '<section class="p-sec p-cust"><div class="p-h">Bill To:</div>'
+       + '<div><b>Customer Name / Company Name:</b> '+(S.custName.trim()?esc(S.custName):blank)+'</div>'
+       + '<div style="white-space:pre-line"><b>Address:</b> '+(S.custAddr.trim()?esc(S.custAddr):blank)+'</div>'
+       + (S.custContact.trim()?'<div><b>Contact:</b> '+esc(S.custContact)+'</div>':'')
+       + '</section>';
+
+  html += '<section class="p-sec"><div class="p-h">'+esc(S.priceHeading)+'</div>'
+       + '<table class="p-tbl"><thead><tr><th style="width:38%">Service / Task Description</th><th style="width:16%">Unit Rate</th><th style="width:21%">Quantity</th><th style="width:25%">Subtotal</th></tr></thead><tbody>';
+  c.rows.forEach(({it,amt},idx)=>{
+    const rateTxt = inr(it.rate)+((it.perUnit && it.unit)?" / "+esc(it.unit):"");
+    const qtyTxt  = esc(String(Number(it.qty)||0)+(it.unit?" "+it.unit:""));
+    html += '<tr'+(idx===c.rows.length-1?' class="lastitem"':'')+'><td><div class="d1">'+esc(it.desc)+'</div>'+(it.details.trim()?'<div class="d2">'+esc(it.details)+'</div>':'')+'</td>'
+         + '<td class="r">'+rateTxt+'</td><td class="c">'+qtyTxt+'</td><td class="r">'+inr(amt)+'</td></tr>';
+  });
+  const showSub = c.disc>0 || Number(S.gstPct)>0;
+  if(showSub){
+    html += '<tr class="tot"><td colspan="3" class="lab">Subtotal:</td><td class="r">'+inr(c.sub)+'</td></tr>';
+    if(c.disc>0) html += '<tr class="tot"><td colspan="3" class="lab">Discount:</td><td class="r">− '+inr(c.disc)+'</td></tr>';
+    if(Number(S.gstPct)>0) html += '<tr class="tot"><td colspan="3" class="lab">GST @ '+esc(String(Number(S.gstPct)))+'%:</td><td class="r">'+inr(c.gst)+'</td></tr>';
+  }
+  const hasRecv = c.received>0;
+  html += '<tr class="tot'+(hasRecv?'':' final')+'"><td colspan="3" class="lab">Total Amount:</td><td class="r">'+inr(c.total)+'</td></tr>';
+  if(hasRecv){
+    html += '<tr class="tot"><td colspan="3" class="lab">Amount Received:</td><td class="r">− '+inr(c.received)+'</td></tr>';
+    html += '<tr class="tot final"><td colspan="3" class="lab">Balance Due:</td><td class="r">'+inr(c.balance)+'</td></tr>';
+  }
+  html += '</tbody></table>'
+       + '<div class="p-words"><b>Amount in Words:</b> '+esc(amountWords(c.total))+'.</div></section>';
+
+  const pay = S.payDetails.trim(), note = S.notes.trim();
+  html += '<div class="p-bottom"><div class="left">'
+       + (pay?'<div class="p-h">Payment Details</div><div class="p-pay">'+esc(pay)+'</div>':'')
+       + (note?'<div class="p-note">'+esc(note)+'</div>':'')
+       + '</div><div class="p-sign"><div class="line"><div class="ttl">'+esc(S.signTitle)+'</div>'+esc(S.signCap)+'</div></div></div>';
+
+  const foot = (S.footer||"").split("\n").map(x=>x.trim()).filter(Boolean);
+  const cssStr = t => '"' + t.replace(/\\/g,"\\\\").replace(/"/g,'\\"') + '"';
+  $("pageFootStyle").textContent = foot.length
+    ? '@page{@bottom-center{content:'+foot.map(cssStr).join(' "\\A " ')+';white-space:pre;text-align:center;vertical-align:top;font-family:"Segoe UI","Noto Sans","Helvetica Neue",Arial,sans-serif;font-size:8pt;line-height:1.55;color:#33415c;padding-top:3mm}}'
+    : '';
+  if(foot.length) html += '<div class="p-foot">'+foot.map(x=>'<div>'+esc(x)+'</div>').join("")+'</div>';
+
+  $("paper").innerHTML = html;
+  $("liveTotal").textContent = inr(c.total);
+  $("liveRecvLabel").textContent = c.received>0 ? "Balance due ("+c.status.toLowerCase()+")" : "Balance due";
+  $("liveBal").textContent = inr(c.balance);
+  document.title = [S.invNo, S.custName].filter(x=>x&&x.trim()).join(" - ") || "Invoice";
+}
+
+/* ---------- form binding ---------- */
+const simple = Array.from(document.querySelectorAll("[data-k]"));
+function fillForm(){
+  simple.forEach(el=>{ el.value = S[el.dataset.k]==null ? "" : S[el.dataset.k]; });
+  renderItems();
+}
+simple.forEach(el=>{
+  el.addEventListener("input",()=>{
+    const k=el.dataset.k;
+    S[k] = (el.type==="number") ? (el.value===""?0:Number(el.value)) : el.value;
+    persist(); renderPaper();
+  });
+});
+
+function renderItems(){
+  const box=$("items"); box.innerHTML="";
+  S.items.forEach((it,i)=>{
+    const d=document.createElement("div"); d.className="item";
+    d.innerHTML =
+      '<div class="row-top"><b>Line '+(i+1)+'</b><span class="tools">'
+      +'<button type="button" data-a="up" title="Move up">↑</button> '
+      +'<button type="button" data-a="down" title="Move down">↓</button> '
+      +'<button type="button" data-a="del" title="Remove line">Remove</button></span></div>'
+      +'<label>Service / task description<input data-f="desc" value="'+esc(it.desc)+'"></label>'
+      +'<label>Details (small text under the description, optional)<input data-f="details" value="'+esc(it.details)+'"></label>'
+      +'<div class="three">'
+      +'<label>Unit rate (₹)<input type="number" step="0.01" min="0" data-f="rate" value="'+esc(it.rate)+'"></label>'
+      +'<label>Quantity<input type="number" step="0.01" min="0" data-f="qty" value="'+esc(it.qty)+'"></label>'
+      +'<label>Unit<input data-f="unit" value="'+esc(it.unit)+'" placeholder="No, Meter, Hr"></label></div>'
+      +'<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" data-f="perUnit" style="width:auto"'+(it.perUnit?" checked":"")+'> Show rate as "₹rate / unit" (for example ₹15 / Meter)</label>'
+      +'<div class="hint" data-sub></div>';
+    const subHint=()=>{
+      const q=Number(it.qty)||0, el=d.querySelector("[data-sub]");
+      if(q>0){ el.className="hint"; el.innerHTML='Subtotal: <b>'+inr((Number(it.rate)||0)*q)+'</b>'; }
+      else { el.className="hint warn"; el.textContent="Quantity is 0, so this line adds ₹0. Enter the actual quantity."; }
+    };
+    subHint();
+    d.querySelectorAll("[data-f]").forEach(el=>{
+      el.addEventListener("input",()=>{
+        const f=el.dataset.f;
+        it[f] = el.type==="checkbox" ? el.checked : (el.type==="number" ? (el.value===""?0:Number(el.value)) : el.value);
+        subHint(); persist(); renderPaper();
+      });
+    });
+    d.querySelectorAll("[data-a]").forEach(b=>{
+      b.addEventListener("click",()=>{
+        const a=b.dataset.a;
+        if(a==="del"){ if(S.items.length>1) S.items.splice(i,1); else S.items[0]=blankItem(); }
+        if(a==="up" && i>0) [S.items[i-1],S.items[i]]=[S.items[i],S.items[i-1]];
+        if(a==="down" && i<S.items.length-1) [S.items[i+1],S.items[i]]=[S.items[i],S.items[i+1]];
+        persist(); renderItems(); renderPaper();
+      });
+    });
+    box.appendChild(d);
+  });
+}
+
+/* ---------- buttons ---------- */
+$("btnAdd").addEventListener("click",()=>{
+  S.items.push(blankItem()); persist(); renderItems(); renderPaper();
+  const last=$("items").lastElementChild; if(last) last.querySelector("input").focus();
+});
+$("btnNext").addEventListener("click",()=>{ S.invNo=nextRef(S.invNo); $("invNo").value=S.invNo; persist(); renderPaper(); });
+$("btnPrint").addEventListener("click",()=>window.print());
+$("btnNew").addEventListener("click",()=>{
+  // Keeps your business details, payment details, notes and footer. Clears customer, lines and payment received.
+  S.custName=""; S.custAddr=""; S.custContact=""; S.quoteRef=""; S.items=[blankItem()];
+  S.discount=0; S.gstPct=0; S.received=0; S.date=isoToday(); S.invNo=nextRef(S.invNo);
+  persist(); fillForm(); renderPaper(); $("custName").focus();
+});
+$("btnSave").addEventListener("click",()=>{
+  const blob=new Blob([JSON.stringify(S,null,2)],{type:"application/json"});
+  const a=document.createElement("a");
+  const name=(S.invNo||"invoice")+(S.custName?"_"+S.custName.replace(/[^\w]+/g,"-"):"");
+  a.href=URL.createObjectURL(blob); a.download=name+".json";
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+});
+function readJson(file,cb){
+  const r=new FileReader();
+  r.onload=()=>{ try{ cb(JSON.parse(r.result)); }catch(err){} };
+  r.readAsText(file);
+}
+$("fileOpen").addEventListener("change",e=>{
+  const f=e.target.files[0]; if(!f) return;
+  readJson(f,o=>{ if(o&&Array.isArray(o.items)){ S=normalise(o); persist(); fillForm(); renderPaper(); } });
+  e.target.value="";
+});
+// Bring customer, line items, discount and GST from a saved quotation file into a new invoice.
+function fromQuote(q){
+  S.custName=q.custName||""; S.custAddr=q.custAddr||""; S.custContact=q.custContact||"";
+  S.quoteRef=q.ref||"";
+  S.items=(q.items||[]).map(it=>Object.assign(blankItem(),{
+    desc:it.desc||"", details:it.details||"", rate:Number(it.rate)||0, qty:Number(it.qty)||0, unit:it.unit||"", perUnit:!!it.perUnit
+  }));
+  if(!S.items.length) S.items=[blankItem()];
+  S.discount=Number(q.discount)||0; S.gstPct=Number(q.gstPct)||0; S.received=0; S.date=isoToday();
+}
+$("fileQuote").addEventListener("change",e=>{
+  const f=e.target.files[0]; if(!f) return;
+  readJson(f,q=>{ if(q&&Array.isArray(q.items)){ fromQuote(q); persist(); fillForm(); renderPaper(); } });
+  e.target.value="";
+});
+
+/* test hooks, harmless in normal use */
+window.__i = {words:amountWords, calc, defaults:DEFAULTS, fromQuote:q=>{S=normalise(S);fromQuote(q);persist();fillForm();renderPaper();}, setState:o=>{S=normalise(o);persist();fillForm();renderPaper();}};
+
+fillForm(); renderPaper();
+})();
+</script>
+</body>
+</html>
